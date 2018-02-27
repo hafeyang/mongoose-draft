@@ -1,6 +1,6 @@
 {
-  "name": "draft",
-  "version": "1.0.0",
+  "name": "mongoose-draft",
+  "version": "0.0.1",
   "description": "draft",
   "main": "index.js",
   "scripts": {
