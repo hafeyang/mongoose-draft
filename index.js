@@ -15,7 +15,20 @@ module.exports = (schema, opts = {}) => {
 
   const diffMethod = (proto = {}, doc) => {
     const change = {};
-    const different = diff.getDiff(proto, doc);
+    const parse = (item, flag = false) => {
+      const other = {};
+      const arr = [/\./, '/'];
+      const args = flag ? arr : arr.reverse();
+
+      args[0] = new RegExp(args[0], 'g');
+
+      Object.keys(item).forEach(k => {
+        const k2 = k.replace(...args);
+        other[k2] = item[k];
+      });
+      return other;
+    };
+    const different = diff.getDiff(parse(proto), doc);
 
     const keys = Object.keys(different).map(v => {
       const arr = v.split('/');
@@ -27,7 +40,8 @@ module.exports = (schema, opts = {}) => {
       (change[k].old === undefined) && delete change[k].old;
       (change[k].new === undefined) && delete change[k].new;
     });
-    return change;
+
+    return parse(change, true);
   };
 
   schema.methods.saveDraft = async function saveDraft() {
@@ -41,6 +55,7 @@ module.exports = (schema, opts = {}) => {
     if (draft) {
       return Promise.reject(new Error('draft exist'));
     }
+    // console.log(diffMethod(doc && doc.toObject() || {}, this.toObject()));
     // console.log('doc: ', doc);
     // console.log(this.toObject());
     return draftModel.create({
@@ -65,14 +80,14 @@ module.exports = (schema, opts = {}) => {
     const cond = { model_id: id, model: modelName, status: 'pending' };
     await draftModel.update(cond, { status: 'done' });
     const [doc] = await this.draft().find({ model_id: id }).sort({ _id: -1 }).limit(1);
+    const item = this.toObject();
 
-    const d = {};
     Object.keys(doc.changes).forEach(k => {
-      d[k] = doc.changes[k].new;
+      doc.changes[k].new && _.set(item, k, doc.changes[k].new);
     });
     // console.log(this);
     // console.log(d);
-    return model.update({ _id: id }, Object.assign(this.toObject(), d), { upsert: true });
+    return model.update({ _id: id }, item, { upsert: true });
   };
 
   // schema.methods.findDraft = function findDraft(cond) {

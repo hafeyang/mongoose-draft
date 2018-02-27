@@ -1,15 +1,18 @@
 const { test } = require('ava');
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const draft = require('../index');
 const draftModel = require('../model');
 
 const { Schema } = mongoose;
+const { Types: { Mixed } } = Schema;
 
 mongoose.connect('mongodb://localhost:27017/draft');
 
 const schema = new Schema({
   name: String,
   age: Number,
+  extra: Mixed
 });
 
 const opts = { modelName: 'person' };
@@ -36,6 +39,7 @@ test('saveDraft and applyDraft', async (t) => {
     }
   };
 
+  doc.extra = deep.a;
   const person = new Person(doc);
   // person.deep = deep.a;
   const id = person._id;
@@ -59,10 +63,11 @@ test('saveDraft and applyDraft', async (t) => {
   t.is(p.name, doc.name);
 
   p.age = 20;
-
+  p.extra = deep.b;
   await p.saveDraft();
   const item4 = await p.findPendingDraft();
-  // console.log(item4);
+  // console.log('item4: ', item4);
+  t.is(item4.changes['extra/d/c2/c22'].new, deep.b.d.c2.c22);
   t.is(item4.status, 'pending');
 
   p.age = 40; // no side effect
